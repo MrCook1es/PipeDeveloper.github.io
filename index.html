@@ -10,6 +10,8 @@
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/select/1.2.4/css/select.dataTables.min.css">
 <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
 
+<link rel="shortcut icon" href="http://root.graef.in/static/xmrigcc/favicon.ico">
+
 <style>
     .right{text-align:right;}
     .left{text-align:left;}
@@ -17,6 +19,7 @@
     .center-tab{text-align: center; vertical-align: middle;}
     .online { color: green}
     .offline { color: red}
+    .paused { color: yellow}
     .toggle { border-radius: 2px;}
     .toggle .toggle-handle { border-radius: 2px; }
 
@@ -45,6 +48,7 @@
 <script type="text/javascript" language="javascript" src="https://cdn.datatables.net/buttons/1.5.0/js/buttons.bootstrap.min.js"></script>
 <script type="text/javascript" language="javascript" src="https://cdn.datatables.net/select/1.2.4/js/dataTables.select.min.js"></script>
 <script type="text/javascript" language="javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery-timeago/1.6.1/jquery.timeago.min.js"></script>
+<script type="text/javascript" language="javascript" src="https://cdnjs.cloudflare.com/ajax/libs/numeral.js/2.0.6/numeral.min.js"></script>
 <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 <script src="https://use.fontawesome.com/6b3cdfc597.js"></script>
@@ -85,7 +89,7 @@
     $(document).ready(function() {
 
         var table = $('#clientStatusList').DataTable({
-            dom: "<'row'<'col-sm-9'B><'col-sm-3'f>><'row'<'col-sm-12't>><'row'<'col-sm-10'i><'col-sm-2'<'#serverTime'>>>",
+            dom: "<'row'<'col-sm-9'B><'col-sm-3'f>><'row'<'col-sm-12't>><'row'<'col-sm-4'i><'col-sm-8'<'#serverTime'>>>",
             bPaginate: false,
             ajax: {
                 url: "/admin/getClientStatusList",
@@ -101,7 +105,7 @@
                 },
                 {data: "client_status.client_id", render: clientInfo},
                 {data: "client_status.current_pool"},
-                {data: "client_status.current_status"},
+                {data: "client_status.current_status", render: clientStatus},
                 {data: "client_status.current_algo_name"},
                 {data: "client_status.hashrate_short", render: round, className: "right"},
                 {data: "client_status.hashrate_medium", render: round, className: "right"},
@@ -111,6 +115,7 @@
                 {data: "client_status.avg_time", className: "right"},
                 {data: "client_status.shares_good", className: "right"},
                 {data: "client_status.shares_total", className: "right"},
+                {data: "client_status.uptime", render: uptime, className: "right"},
                 {data: "client_status.last_status_update", render: laststatus},
                 {
                     data: null,
@@ -324,7 +329,7 @@
             currentServerTime = settings.json.current_server_time * 1000;
             clockDrift = new Date().getTime() - currentServerTime;
 
-            $('#serverTime').html("<div class='dataTables_info'>" + new Date(currentServerTime) + "</div>");
+            $('#serverTime').html("<div class='dataTables_info text-right'>" + new Date(currentServerTime) + "</div>");
         });
 
         table.on('select', function () {
@@ -449,6 +454,20 @@
         });
     }
 
+    function uptime( data, type, row ) {
+        if (type !== 'sort') {
+            var lastStatus = row.client_status.last_status_update * 1000;
+
+            if (isOnline(lastStatus)) {
+                return numeral(data/1000).format('00:00:00:00');
+            } else {
+                return "";
+            }
+        }
+
+        return data;
+    }
+
     function laststatus( data, type, row ) {
         if (type !== 'sort') {
             var date = new Date(data*1000 - clockDrift);
@@ -456,6 +475,16 @@
         }
 
         return data;
+    }
+
+    function clientStatus( data, type, row ) {
+        var lastStatus = row.client_status.last_status_update * 1000;
+
+        if (isOnline(lastStatus)) {
+            return data;
+        } else {
+            return "OFFLINE";
+        }
     }
 
     function clientInfo( data, type, row ) {
@@ -556,10 +585,10 @@
     <div id="statusBar"></div>
 
     <div class="center">
-        <h1>XMRigCC Dashboard</h1>
+        <img src="http://root.graef.in/static/xmrigcc/banner.png"/>
     </div>
 
-    <form style="padding-bottom: 25px">
+    <form style="padding-bottom: 25px; margin-top: -50px">
         <label><input id="hideOffline" type="checkbox" checked  data-toggle="toggle" data-size="mini" data-onstyle="success" data-offstyle="danger"/><span>Hide offline miners</span></label>
         <label><input id="showOfflineNotification" type="checkbox" checked data-toggle="toggle" data-size="mini" data-onstyle="success" data-offstyle="danger" /><span>Notify when miner went offline</span></label>
     </form>
@@ -583,6 +612,7 @@
 
             <th>Shares Good</th>
             <th>Shares Total</th>
+            <th>Uptime</th>
             <th>Last Update</th>
             <th>Edit</th>
         </tr>
@@ -591,6 +621,7 @@
         <tr>
             <th class="center" width="2%"><i class="fa fa-square-o" id="selectAllBottom"></i></th>
             <th class="left">Total:</th>
+            <th></th>
             <th></th>
             <th></th>
             <th></th>
